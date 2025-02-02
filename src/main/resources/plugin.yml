@@ -1,0 +1,5 @@
+name: WebManager-Test
+main: kr.apo2073.Main
+version: ${version}
+api-version: 1.20
+author: [ apo2073 ]
