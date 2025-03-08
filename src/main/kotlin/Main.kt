@@ -8,11 +8,11 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class Main: JavaPlugin() {
     companion object {
-        lateinit var instance:Main
+        lateinit var plugin:Main
     }
     private lateinit var engine: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>
     override fun onEnable() {
-        instance=this
+        plugin=this
 
         saveDefaultConfig()
         saveResource("templates/index.ftl", true)

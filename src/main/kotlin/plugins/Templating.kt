@@ -1,6 +1,5 @@
 package kr.apo2073.plugins
 
-import com.google.gson.Gson
 import com.google.gson.JsonObject
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
@@ -12,9 +11,8 @@ import kr.apo2073.Main
 import kr.apo2073.utilities.getLog
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
-import org.bukkit.entity.memory.MemoryKey
 
-private val main= Main.instance
+private val main= Main.plugin
 fun Application.configureTemplating() {
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
@@ -37,20 +35,22 @@ fun Application.configureTemplating() {
         }
 
         get("/players") {
-            fun banned():Int {
-                var count=0
-                Bukkit.getOfflinePlayers().forEach {
-                    if (it.isBanned) count+=1
-                }
-                return count
+            fun banned(): Int {
+                return Bukkit.getOfflinePlayers().count { it.isBanned }
             }
+            val players = Bukkit.getOnlinePlayers().associate {
+                it.name to it.uniqueId.toString()
+            }
+            val playerNames = players.keys.joinToString(",")
             call.respond(FreeMarkerContent(
-                    "players.ftl",
+                "players.ftl",
                     mapOf(
-                        "online" to main.server.onlinePlayers.size,
-                        "banned" to banned()
-                    ), ""
-            ))
+                        "online" to Bukkit.getOnlinePlayers().size,
+                        "banned" to banned(),
+                        "players" to playerNames,
+                        "playerData" to players
+                    ), "")
+            )
         }
 
         post("/players-data") {
@@ -58,9 +58,14 @@ fun Application.configureTemplating() {
             val json=JsonObject()
             json.addProperty("players", list)
             list.split(",").forEach {
-                json.addProperty(it, Bukkit.getPlayer(it)?.uniqueId.toString())
+//                json.addProperty(it, Bukkit.getPlayer(it)?.uniqueId.toString() ?: return@forEach)
             }
             call.respondText(json.toString())
+        }
+
+        get("/player-info") {
+            val uuid=call.queryParameters["uuid"] ?: return@get
+
         }
 
         get("/plugins") {

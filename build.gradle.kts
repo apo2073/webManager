@@ -2,7 +2,7 @@ val kotlin_version: String by project
 val logback_version: String by project
 
 plugins {
-    kotlin("jvm") version "2.1.10"
+    kotlin("jvm") version "2.1.0"
     id("io.ktor.plugin") version "3.0.3"
 }
 
@@ -28,11 +28,13 @@ repositories {
     maven("https://jitpack.io") {
         name= "jitpack"
     }
+    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
 }
 
 dependencies {
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.0.3")
-    compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    compileOnly("me.clip:placeholderapi:2.11.6")
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-freemarker")
     implementation("io.ktor:ktor-server-netty")
@@ -41,7 +43,7 @@ dependencies {
 //    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }
 
-val targetJavaVersion = 17
+val targetJavaVersion = 21
 kotlin {
     jvmToolchain(targetJavaVersion)
 }

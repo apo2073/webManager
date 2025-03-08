@@ -1,0 +1,3 @@
+player-info:
+  - name: %player_name%
+  - uuid: %player_uuid%

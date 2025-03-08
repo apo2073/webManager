@@ -6,7 +6,7 @@ import io.ktor.server.routing.*
 import kr.apo2073.Main
 
 fun Application.configureRouting() {
-    val main= Main.instance
+    val main= Main.plugin
     routing {
         get("/") {
             call.respondRedirect("/index")
