@@ -3,3 +3,5 @@ main: kr.apo2073.Main
 version: ${version}
 api-version: 1.21
 author: [ apo2073 ]
+commands:
+  auth:
