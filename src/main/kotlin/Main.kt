@@ -17,7 +17,7 @@ class Main: JavaPlugin() {
 
         saveDefaultConfig()
         engine= embeddedServer(
-            Netty, port = 8080,
+            Netty, port = config.getInt("port"),
             host = "0.0.0.0",
             module = Application::module
         ).start(wait = false)

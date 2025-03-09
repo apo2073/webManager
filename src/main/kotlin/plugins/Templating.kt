@@ -29,13 +29,13 @@ fun Application.configureTemplating() {
             call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to null, "code" to null), ""))
         }
 
-        suspend fun isAuthenticated(call: RoutingCall): Boolean {
+        fun isAuthenticated(call: RoutingCall): Boolean {
             val encodedUuid = call.request.cookies["RQST_AUTH"] ?: return false
             return try {
                 val uuid = String(Base64.getDecoder().decode(encodedUuid), Charsets.UTF_8)
                 Bukkit.getPlayer(UUID.fromString(uuid))?.isOp == true
             } catch (e: IllegalArgumentException) {
-                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
+//                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
                 false
             }
         }
@@ -140,9 +140,6 @@ fun Application.configureTemplating() {
             val list= Bukkit.getOnlinePlayers().joinToString(",") { it.name }
             val json=JsonObject()
             json.addProperty("players", list)
-            list.split(",").forEach {
-//                json.addProperty(it, Bukkit.getPlayer(it)?.uniqueId.toString() ?: return@forEach)
-            }
             call.respondText(json.toString())
         }
 
