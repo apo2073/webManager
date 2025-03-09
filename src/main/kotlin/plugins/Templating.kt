@@ -24,64 +24,60 @@ fun Application.configureTemplating() {
     routing {
         val authCodes = mutableMapOf<String, String>()
         val pendingAuths = mutableMapOf<String, String>()
+
         suspend fun goToVerify(call: RoutingCall) {
-            call.respond(FreeMarkerContent(
-                "auth.ftl",
-                mapOf(
-                    "error" to null,
-                    "code" to null
-                ), ""
-            ))
+            call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to null, "code" to null), ""))
+        }
+
+        suspend fun isAuthenticated(call: RoutingCall): Boolean {
+            val encodedUuid = call.request.cookies["RQST_AUTH"] ?: return false
+            return try {
+                val uuid = String(Base64.getDecoder().decode(encodedUuid), Charsets.UTF_8)
+                Bukkit.getPlayer(UUID.fromString(uuid))?.isOp == true
+            } catch (e: IllegalArgumentException) {
+                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
+                false
+            }
         }
 
         post("/verify-code") {
-            val params = call.receiveParameters()
-            val code = params["code"]
-
+            val code = call.receiveParameters()["code"]
             val uuid = authCodes[code]
             if (uuid != null) {
-                call.application.log.info("Code $code verified for UUID: $uuid")
                 pendingAuths[uuid] = "verified"
                 authCodes.remove(code)
+                call.respond(HttpStatusCode.OK, "Verification successful")
             } else {
                 call.respond(HttpStatusCode.BadRequest, "Invalid code")
             }
         }
 
         post("/request-code") {
-            val playerName = call.receiveParameters()["player"]
-            if (playerName==null) {
-                call.respondRedirect("/")
-                return@post
-            }
-
+            val playerName = call.receiveParameters()["player"] ?: return@post call.respondRedirect("/")
             if (playerName.isEmpty()) {
-                call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "플레이어 이름을 입력하세요", "code" to null)))
-                return@post
+                return@post call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "플레이어 이름을 입력하세요", "code" to null)))
             }
 
-            if (Bukkit.getPlayer(playerName)==null) {
-                call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "존재하지 않는 플레이어입니다", "code" to null)))
-                return@post
+            val player = Bukkit.getPlayer(playerName) ?: return@post call.respond(
+                FreeMarkerContent("auth.ftl", mapOf("error" to "존재하지 않는 플레이어입니다", "code" to null))
+            )
+            if (!player.isOp) {
+                return@post call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "해당 플레이어는 관리자가 아닙니다!!", "code" to null)))
             }
-            if (!(Bukkit.getPlayer(playerName)?.isOp ?: return@post)) {
-                call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "해당 플레이어는 관리자가 아닙니다!!", "code" to null)))
-                return@post
-            }
-            val uuid = Bukkit.getPlayer(playerName)?.uniqueId.toString()
+
+            val uuid = player.uniqueId.toString()
             val authCode = Auth().generateAuthCode()
             authCodes[authCode] = uuid
             call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to null, "code" to authCode)))
         }
 
         get("/check-auth") {
-            val params = call.request.queryParameters
-            val code = params["code"]
+            val code = call.request.queryParameters["code"]
             val uuid = authCodes[code] ?: ""
             if (pendingAuths[uuid] == "verified") {
                 call.response.cookies.append(
-                    name = "uuid",
-                    value = uuid,
+                    name = "RQST_AUTH",
+                    value = Base64.getEncoder().encodeToString(uuid.toByteArray(Charsets.UTF_8)),
                     maxAge = 3600,
                     path = "/",
                     httpOnly = true
@@ -94,13 +90,7 @@ fun Application.configureTemplating() {
         }
 
         get("/index") {
-            if (
-                call.request.cookies["uuid"]==null
-                || !(Bukkit.getPlayer(UUID.fromString(call.request.cookies["uuid"].toString()))
-                    ?.isOp ?: run {
-                    goToVerify(call)
-                    return@get
-                })) goToVerify(call)
+            if (!isAuthenticated(call)) return@get goToVerify(call)
             call.respond(FreeMarkerContent(
                 "index.ftl",
                 mapOf(
@@ -114,17 +104,10 @@ fun Application.configureTemplating() {
         }
 
         get("/plugins") {
-            if (
-                call.request.cookies["uuid"]==null
-                || !(Bukkit.getPlayer(UUID.fromString(call.request.cookies["uuid"].toString()))
-                    ?.isOp ?: run {
-                    goToVerify(call)
-                    return@get
-                })) goToVerify(call)
-            val list= Bukkit.getPluginsFolder().listFiles()
+            if (!isAuthenticated(call)) return@get goToVerify(call)
+            val list = Bukkit.getPluginsFolder().listFiles()
                 ?.filter { it.name.endsWith(".jar") }
                 ?.map { it.name } ?: emptyList()
-
             call.respond(FreeMarkerContent(
                 "plugins.ftl",
                 mapOf(
@@ -135,33 +118,19 @@ fun Application.configureTemplating() {
         }
 
         get("/players") {
-            if (
-                call.request.cookies["uuid"]==null
-                || !(Bukkit.getPlayer(UUID.fromString(call.request.cookies["uuid"].toString()))
-                    ?.isOp ?: run {
-                    goToVerify(call)
-                    return@get
-                })) goToVerify(call)
+            if (!isAuthenticated(call)) return@get goToVerify(call)
             try {
-                fun banned(): Int {
-                    return Bukkit.getOfflinePlayers().count { it.isBanned }
-                }
-
-                val players = Bukkit.getOnlinePlayers().associate {
-                    it.name to it.uniqueId.toString()
-                }
-                val playerNames = players.keys.joinToString(",")/*.also { println(it) }*/
-                call.respond(
-                    FreeMarkerContent(
-                        "players.ftl",
-                        mapOf(
-                            "online" to Bukkit.getOnlinePlayers().size,
-                            "banned" to banned(),
-                            "players" to playerNames,
-                            "playerData" to players
-                        ), ""
-                    )
-                )
+                fun banned() = Bukkit.getOfflinePlayers().count { it.isBanned }
+                val players = Bukkit.getOnlinePlayers().associate { it.name to it.uniqueId.toString() }
+                call.respond(FreeMarkerContent(
+                    "players.ftl",
+                    mapOf(
+                        "online" to Bukkit.getOnlinePlayers().size,
+                        "banned" to banned(),
+                        "players" to players.keys.joinToString(","),
+                        "playerData" to players
+                    ), ""
+                ))
             } catch (e: Exception) {
                 call.respondText(e.toString())
             }
