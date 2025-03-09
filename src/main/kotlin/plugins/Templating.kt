@@ -33,11 +33,11 @@ fun Application.configureTemplating() {
             val encodedUuid = call.request.cookies["RQST_AUTH"] ?: return false
             return try {
                 val uuid = String(Base64.getDecoder().decode(encodedUuid), Charsets.UTF_8)
-                Bukkit.getPlayer(UUID.fromString(uuid))?.isOp == true
+                Bukkit.getOfflinePlayer(UUID.fromString(uuid)).isOp
             } catch (e: IllegalArgumentException) {
 //                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
                 false
-            }
+            } catch (e: Exception) {false}
         }
 
         post("/verify-code") {
