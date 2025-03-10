@@ -8,7 +8,6 @@ import io.ktor.server.freemarker.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.utils.io.core.*
 import kr.apo2073.Main
 import kr.apo2073.auth.Auth
 import kr.apo2073.auth.Encryption
@@ -17,7 +16,6 @@ import kr.apo2073.utilities.getLog
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import java.util.*
-import kotlin.text.toByteArray
 
 private val main= Main.plugin
 fun Application.configureTemplating() {
@@ -35,7 +33,7 @@ fun Application.configureTemplating() {
         fun isAuthenticated(call: RoutingCall): Boolean {
             val encodedUuid = call.request.cookies["RQST_AUTH"] ?: return false
             return try {
-                val uuid = Encryption.decrypt(encodedUuid)
+                val uuid = Encryption.p(encodedUuid)
                 Bukkit.getOfflinePlayer(UUID.fromString(uuid)).isOp
             } catch (e: IllegalArgumentException) {
 //                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
@@ -80,7 +78,7 @@ fun Application.configureTemplating() {
             if (pendingAuths[uuid] == "verified") {
                 call.response.cookies.append(
                     name = "RQST_AUTH",
-                    value = Encryption.encrypt(uuid),
+                    value = Encryption.j(uuid),
                     maxAge = 3600,
                     path = "/",
                     httpOnly = true

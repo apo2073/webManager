@@ -10,39 +10,39 @@ import javax.crypto.spec.SecretKeySpec
 
 class Encryption {
     companion object {
-        private const val SECRET_KEY = "WEBMANAGER"
-        private const val SALT = "RandomSaltValue"
-        private const val ALGORITHM = "AES/CBC/PKCS5Padding"
+        private const val a = "WEBMANAGER"
+        private const val b = "RandomSaltValue"
+        private const val c = "AES/CBC/PKCS5Padding"
 
-        private fun generateKey(): SecretKeySpec {
-            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-            val spec = PBEKeySpec(SECRET_KEY.toCharArray(), SALT.toByteArray(), 65536, 256)
-            val secretKey = factory.generateSecret(spec)
-            return SecretKeySpec(secretKey.encoded, "AES")
+        private fun d(): SecretKeySpec {
+            val e = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            val f = PBEKeySpec(a.toCharArray(), b.toByteArray(), 65536, 256)
+            val g = e.generateSecret(f)
+            return SecretKeySpec(g.encoded, "AES")
         }
 
-        private fun generateRandomIV(): IvParameterSpec {
-            val ivBytes = ByteArray(16)
-            SecureRandom().nextBytes(ivBytes)
-            return IvParameterSpec(ivBytes)
+        private fun h(): IvParameterSpec {
+            val i = ByteArray(16)
+            SecureRandom().nextBytes(i)
+            return IvParameterSpec(i)
         }
 
-        fun encrypt(data: String): String {
-            val cipher = Cipher.getInstance(ALGORITHM)
-            val iv = generateRandomIV()
-            cipher.init(Cipher.ENCRYPT_MODE, generateKey(), iv)
-            val encrypted = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
-            val combined = iv.iv + encrypted
-            return Base64.getEncoder().encodeToString(combined)
+        fun j(k: String): String {
+            val l = Cipher.getInstance(c)
+            val m = h()
+            l.init(Cipher.ENCRYPT_MODE, d(), m)
+            val n = l.doFinal(k.toByteArray(Charsets.UTF_8))
+            val o = m.iv + n
+            return Base64.getEncoder().encodeToString(o)
         }
 
-        fun decrypt(encryptedData: String): String {
-            val decoded = Base64.getDecoder().decode(encryptedData)
-            val iv = IvParameterSpec(decoded.copyOfRange(0, 16))
-            val cipherText = decoded.copyOfRange(16, decoded.size)
-            val cipher = Cipher.getInstance(ALGORITHM)
-            cipher.init(Cipher.DECRYPT_MODE, generateKey(), iv)
-            return String(cipher.doFinal(cipherText), Charsets.UTF_8)
+        fun p(q: String): String {
+            val r = Base64.getDecoder().decode(q)
+            val s = IvParameterSpec(r.copyOfRange(0, 16))
+            val t = r.copyOfRange(16, r.size)
+            val u = Cipher.getInstance(c)
+            u.init(Cipher.DECRYPT_MODE, d(), s)
+            return String(u.doFinal(t), Charsets.UTF_8)
         }
     }
 }
