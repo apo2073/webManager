@@ -13,7 +13,7 @@ class PlayerDetails {
             plugin.reloadConfig()
             val list = plugin.config.getStringList("player-info")
             if (list.isEmpty()) return "{}"
-            val player = Bukkit.getPlayer(uuid) ?: return "{}"
+            val player = Bukkit.getOfflinePlayer(uuid) ?: return "{}"
 
             val json = JsonObject()
 

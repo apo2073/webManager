@@ -66,6 +66,7 @@ tasks.shadowJar {
     archiveClassifier.set("")
 //    configurations = listOf(project.configurations.runtimeClasspath.get())
 //    destinationDirectory=file("C:\\Users\\PC\\Desktop\\Test_Server\\21.1\\plugins")
+    destinationDirectory=file("C:\\Users\\이태수\\Desktop\\server\\21.1\\plugins")
     minimize {
         exclude(dependency("io.ktor:.*:.*"))
         exclude(dependency("org.jetbrains.kotlin:.*"))

@@ -5,6 +5,7 @@ import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.freemarker.*
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -22,7 +23,8 @@ fun Application.configureTemplating() {
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
-    routing {
+        routing { // <#--https://crafatar.com/renders/body/6b24e259-9fd7-47c8-a1db-af00f2fded55-->
+
         val authCodes = mutableMapOf<String, String>()
         val pendingAuths = mutableMapOf<String, String>()
 

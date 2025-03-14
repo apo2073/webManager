@@ -1,6 +1,6 @@
 player-info:
-  - name: '%player_name%'
-  - uuid: '%player_uuid%'
+  - "name: %player_name%"
+  - "uuid: %player_uuid%"
 
 uri: "127.0.0.1"
 port: 8080

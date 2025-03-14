@@ -1,6 +1,9 @@
 <html>
 <head>
     <title>WebManager</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
     <style>
         @font-face { font-family: CookieRun; src: url('/resource/CookieRun.ttf') }
         body {
@@ -18,6 +21,11 @@
             display: flex;
             justify-content: center;
             gap: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            padding: 0 10px;
         }
         .nav-item {
             cursor: pointer;
@@ -33,7 +41,7 @@
         }
         .container {
             display: flex;
-            margin: 20px;
+            margin: 80px 20px 20px;
             gap: 20px;
             flex-direction: column;
         }
@@ -83,6 +91,81 @@
             flex-wrap: wrap;
             gap: 20px;
         }
+        .modal.fade .modal-dialog {
+            transform: translate(-50%, -55%);
+            opacity: 0;
+            transition: all 0.1s ease-out;
+        }
+        .modal.in .modal-dialog {
+            transform: translate(-50%, -50%);
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #fafafa;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            padding: 20px;
+            width: 500px;
+        }
+        .modal-header {
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 105%;
+            height: 10%;
+            text-align: center;
+        }
+        .modal-title {
+            font-family: CookieRun, sans-serif;
+            font-size: 15px;
+            margin: 0;
+        }
+        .modal-body {
+            background-color: #fafafa;
+            font-size: 19px;
+            display: flex;
+            flex: 1;
+            padding: 20px 10px;
+            margin-top: 60px;
+        }
+        .modal-body .left-section {
+            flex: 1;
+            padding-right: 20px;
+            border-right: 2px solid #ddd;
+        }
+        .modal-body .right-section {
+            flex: 2;
+            padding-left: 20px;
+        }
+        .left-section img {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .modal-dialog {
+            background-color: #fafafa;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: auto;
+            max-width: 500px;
+            margin: 0;
+        }
+        .close {
+            border: none;
+            background: transparent;
+            font-size: 30px;
+            font-weight: bold;
+            color: #000;
+            opacity: 0.7;
+        }
+        .close:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -112,15 +195,57 @@
         <#list playersList as player>
             <#assign playerUUID = playerData[player]!''>
             <div class="player-profile">
-                <button class="detail-button" onclick="">⁝</button>
-                <img src="https://api.mineatar.io/face/${playerUUID}?scale=16&format=png"><br>
+                <button class="detail-button" data-toggle="modal" data-target="#playerModal" data-player="${player}" data-uuid="${playerUUID}">⁝</button>
+                <img src="https://api.mineatar.io/face/${playerUUID}?scale=16&format=png" alt="player head image"><br>
                 <strong>${player}</strong><br>
                 UUID: ${playerUUID}
             </div>
         </#list>
     </div>
-    <#--https://crafatar.com/renders/body/6b24e259-9fd7-47c8-a1db-af00f2fded55-->
+
+    <div class="modal fade" id="playerModal" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title">상세 정보</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="left-section">
+                        <img id="playerBodyImage" src="" alt="Player Body Image">
+                    </div>
+                    <div class="right-section">
+                        <p id="playerAdditionalInfo"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    $('#playerModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        const uuid = button.data('uuid');
+        const modal = $(this);
+
+        $.ajax({
+            url: '/player-info?uuid=' + uuid,
+            method: 'GET',
+            success: function(response) {
+                const playerInfo = JSON.parse(response);
+                modal.find('#playerAdditionalInfo').html(playerInfo.name + "<br>" + playerInfo.uuid);
+            },
+            error: function() {
+                modal.find('#playerAdditionalInfo').html('플레이어 정보를 가져오는 데 실패했습니다.');
+            }
+        });
+
+        modal.find('#playerBodyImage').attr('src', 'https://crafatar.com/renders/body/' + uuid);
+    });
+</script>
 
 </body>
 </html>
