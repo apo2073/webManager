@@ -109,8 +109,7 @@
             width: 500px;
         }
         .modal-header {
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #ddd;
+            background-color: #fafafa;
             padding: 10px;
             position: absolute;
             top: 0;

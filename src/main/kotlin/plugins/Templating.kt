@@ -12,6 +12,7 @@ import io.ktor.server.routing.*
 import kr.apo2073.Main
 import kr.apo2073.auth.Auth
 import kr.apo2073.auth.Encryption
+import kr.apo2073.cmds.TabCompleter
 import kr.apo2073.utilities.PlayerDetails
 import kr.apo2073.utilities.getLog
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
@@ -138,6 +139,17 @@ fun Application.configureTemplating() {
                 call.respondText(e.toString())
             }
         }
+
+        post("/tabComp") {
+            val parameters = call.receiveParameters()
+            val input = parameters["input"]?.trim() ?: ""
+            val parts = input.split(" ")
+            val command = parts.getOrNull(0) ?: ""
+            val array = if (parts.size > 1) parts.subList(1, parts.size).toTypedArray() else emptyArray()
+
+            val completions = TabCompleter.getCompleter(command, array) ?: emptyList()
+            call.respond(completions.also { println(it) })
+        } // fix it
 
         post("/players-data") {
             val list= Bukkit.getOnlinePlayers().joinToString(",") { it.name }
