@@ -1,5 +1,7 @@
 package kr.apo2073.plugins
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
@@ -9,6 +11,8 @@ import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kr.apo2073.Main
 import kr.apo2073.auth.Auth
 import kr.apo2073.auth.Encryption
@@ -24,7 +28,7 @@ fun Application.configureTemplating() {
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
-        routing { // <#--https://crafatar.com/renders/body/6b24e259-9fd7-47c8-a1db-af00f2fded55-->
+    routing { // <#--https://crafatar.com/renders/body/6b24e259-9fd7-47c8-a1db-af00f2fded55-->
 
         val authCodes = mutableMapOf<String, String>()
         val pendingAuths = mutableMapOf<String, String>()
@@ -41,7 +45,9 @@ fun Application.configureTemplating() {
             } catch (e: IllegalArgumentException) {
 //                call.application.log.error("Invalid UUID format in cookie: $encodedUuid")
                 false
-            } catch (e: Exception) {false}
+            } catch (e: Exception) {
+                false
+            }
         }
 
         post("/verify-code") {
@@ -59,14 +65,24 @@ fun Application.configureTemplating() {
         post("/request-code") {
             val playerName = call.receiveParameters()["player"] ?: return@post call.respondRedirect("/")
             if (playerName.isEmpty()) {
-                return@post call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "플레이어 이름을 입력하세요", "code" to null)))
+                return@post call.respond(
+                    FreeMarkerContent(
+                        "auth.ftl",
+                        mapOf("error" to "플레이어 이름을 입력하세요", "code" to null)
+                    )
+                )
             }
 
             val player = Bukkit.getPlayer(playerName) ?: return@post call.respond(
                 FreeMarkerContent("auth.ftl", mapOf("error" to "존재하지 않는 플레이어입니다", "code" to null))
             )
             if (!player.isOp) {
-                return@post call.respond(FreeMarkerContent("auth.ftl", mapOf("error" to "해당 플레이어는 관리자가 아닙니다!!", "code" to null)))
+                return@post call.respond(
+                    FreeMarkerContent(
+                        "auth.ftl",
+                        mapOf("error" to "해당 플레이어는 관리자가 아닙니다!!", "code" to null)
+                    )
+                )
             }
 
             val uuid = player.uniqueId.toString()
@@ -95,16 +111,18 @@ fun Application.configureTemplating() {
 
         get("/index") {
             if (!isAuthenticated(call)) return@get goToVerify(call)
-            call.respond(FreeMarkerContent(
-                "index.ftl",
-                mapOf(
-                    "motd" to PlainTextComponentSerializer.plainText().serialize(main.server.motd()),
-                    "onlinePlayers" to main.server.onlinePlayers.size,
-                    "maxPlayers" to main.server.maxPlayers,
-                    "version" to Bukkit.getBukkitVersion(),
-                    "logs" to getLog()
-                ), ""
-            ))
+            call.respond(
+                FreeMarkerContent(
+                    "index.ftl",
+                    mapOf(
+                        "motd" to PlainTextComponentSerializer.plainText().serialize(main.server.motd()),
+                        "onlinePlayers" to main.server.onlinePlayers.size,
+                        "maxPlayers" to main.server.maxPlayers,
+                        "version" to Bukkit.getBukkitVersion(),
+                        "logs" to getLog()
+                    ), ""
+                )
+            )
         }
 
         get("/plugins") {
@@ -112,13 +130,15 @@ fun Application.configureTemplating() {
             val list = Bukkit.getPluginsFolder().listFiles()
                 ?.filter { it.name.endsWith(".jar") }
                 ?.map { it.name } ?: emptyList()
-            call.respond(FreeMarkerContent(
-                "plugins.ftl",
-                mapOf(
-                    "count" to list.size,
-                    "plugins" to list.joinToString(",")
-                ), ""
-            ))
+            call.respond(
+                FreeMarkerContent(
+                    "plugins.ftl",
+                    mapOf(
+                        "count" to list.size,
+                        "plugins" to list.joinToString(",")
+                    ), ""
+                )
+            )
         }
 
         get("/players") {
@@ -126,41 +146,54 @@ fun Application.configureTemplating() {
             try {
                 fun banned() = Bukkit.getOfflinePlayers().count { it.isBanned }
                 val players = Bukkit.getOnlinePlayers().associate { it.name to it.uniqueId.toString() }
-                call.respond(FreeMarkerContent(
-                    "players.ftl",
-                    mapOf(
-                        "online" to Bukkit.getOnlinePlayers().size,
-                        "banned" to banned(),
-                        "players" to players.keys.joinToString(","),
-                        "playerData" to players
-                    ), ""
-                ))
+                call.respond(
+                    FreeMarkerContent(
+                        "players.ftl",
+                        mapOf(
+                            "online" to Bukkit.getOnlinePlayers().size,
+                            "banned" to banned(),
+                            "players" to players.keys.joinToString(","),
+                            "playerData" to players
+                        ), ""
+                    )
+                )
             } catch (e: Exception) {
                 call.respondText(e.toString())
             }
         }
 
         post("/tabComp") {
-            val parameters = call.receiveParameters()
-            val input = parameters["input"]?.trim() ?: ""
-            val parts = input.split(" ")
-            val command = parts.getOrNull(0) ?: ""
-            val array = if (parts.size > 1) parts.subList(1, parts.size).toTypedArray() else emptyArray()
+            try {
+                val parameters = call.receiveParameters()
+                val input = parameters["input"]?.trim() ?: call.request.queryParameters["input"]?.trim() ?: ""
+                if (input.isEmpty()) {
+                    call.respond(Gson().toJson(emptyList<String>()))
+                    return@post
+                }
+                val parts = input.split(" ")
+                val command = parts.getOrNull(0) ?: ""
+                val args = if (parts.size > 1) parts.subList(1, parts.size).toTypedArray() else emptyArray()
 
-            val completions = TabCompleter.getCompleter(command, array) ?: emptyList()
-            call.respond(completions.also { println(it) })
-        } // fix it
+                val completions = withContext(Dispatchers.Main) {
+                    TabCompleter.getCompleter(command, args)
+                }
+
+                call.respond(Gson().toJson(completions))
+            } catch (e: Exception) {
+                call.respond(Gson().toJson(emptyList<String>()))
+            }
+        }
 
         post("/players-data") {
-            val list= Bukkit.getOnlinePlayers().joinToString(",") { it.name }
-            val json=JsonObject()
+            val list = Bukkit.getOnlinePlayers().joinToString(",") { it.name }
+            val json = JsonObject()
             json.addProperty("players", list)
             call.respondText(json.toString())
         }
 
         post("plugins-data") {
-            val list= Bukkit.getPluginsFolder().listFiles()?.map { it.name } ?: emptyList()
-            val json=JsonObject()
+            val list = Bukkit.getPluginsFolder().listFiles()?.map { it.name } ?: emptyList()
+            val json = JsonObject()
             json.addProperty("plugin", list.joinToString(","))
 
             call.respondText(json.toString())
@@ -175,6 +208,19 @@ fun Application.configureTemplating() {
             } catch (e: Exception) {
                 call.respondText("Internal Server Error", status = HttpStatusCode.InternalServerError)
             }
+        }
+
+        post("/command") {
+//            if (call.response.headers.get("")=="") {}
+            val input = call.request.queryParameters["input"] ?: ""
+            var success = false
+            Bukkit.getScheduler().runTask(main, Runnable {
+                success= Bukkit.dispatchCommand(Bukkit.getConsoleSender(), input)
+            })
+            call.respond(JsonObject().apply {
+                addProperty("success", success.toString())
+                addProperty("command", input)
+            }.toString())
         }
 
         get("/logs") {

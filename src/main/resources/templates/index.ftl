@@ -141,7 +141,6 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             box-sizing: border-box;
-            font-family: monospace;
         }
         .suggestions {
             position: absolute;
@@ -200,10 +199,33 @@
                 },
                 body: 'input=' + encodeURIComponent(input)
             });
+
+            if (!response.ok) {
+                return
+            }
+
             const suggestions = await response.json();
+            console.log('Tab completions received:', suggestions);
             showSuggestions(suggestions);
         } catch (e) {
+            console.error('Tab completion error:', e.message || e);
             showSuggestions([]);
+        }
+    }
+
+    async function sendCommand(input) {
+        try {
+            const response = await fetch('/command?input=' + encodeURIComponent(input), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                }
+            });
+            const result = await response.json();
+            console.log('Command sent:', result);
+        } catch (e) {
+            console.error('Command error:', e);
         }
     }
 
@@ -246,12 +268,17 @@
         document.querySelector('.command-btn').addEventListener('click', openCommandModal);
         document.querySelector('.modal-overlay').addEventListener('click', closeCommandModal);
 
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter') {
-                closeCommandModal();
+                const command = input.value.trim();
+                if (command) {
+                    await sendCommand(command);
+                    closeCommandModal();
+                    input.value = '';
+                }
             } else if (e.key === 'Tab') {
                 e.preventDefault();
-                fetchTabCompletions(input.value);
+                await fetchTabCompletions(input.value);
             }
         });
 

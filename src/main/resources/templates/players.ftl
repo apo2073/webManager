@@ -242,7 +242,7 @@
             }
         });
 
-        modal.find('#playerBodyImage').attr('src', 'https://crafatar.com/renders/body/' + uuid);
+        modal.find('#playerBodyImage').attr('src', 'https://nmsr.nickac.dev/fullbody/' + uuid);
     });
 </script>
 
